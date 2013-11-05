@@ -26,7 +26,7 @@ module Delay2n #(parameter WIDTH = 32, D = 64, B = 6)(
 reg [WIDTH-1:0] dat_ram [D-1:0];
 reg [B-1:0]  adr_cnt;
 reg 			 dat_val;
-assign 	  dat_out  = (dat_val)? dat_ram[adr_cnt]: {WIDTH{1'b0}};
+assign 	  dat_out  = (dat_val)? dat_ram[adr_cnt]: 0;
 //integer 	cnt;
 always@ (posedge clk)begin
 	if(rst) begin

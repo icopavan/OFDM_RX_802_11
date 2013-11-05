@@ -18,39 +18,36 @@
 // Additional Comments: 
 //
 //////////////////////////////////////////////////////////////////////////////////
-module Acc_Sum #(parameter FBIT2 =7)	//number of P Metric's frational bits
-(  input 			clk,rst,
+module Acc_Sum(
+   input 			clk,rst,
 	input 			ena,
-	input 			[FBIT2:0] a_Re, a_Im,						// in format 1.FBIT2
-	input				[FBIT2:0] a_d_Re, a_d_Im,					// in format 1.FBIT2
-	output signed  [6 + FBIT2:0] sum_out_Im, sum_out_Re	// in format 7.FBIT2
+	input 			[16:0] a,
+	input				[16:0] a_d, 
+	output signed  [23:0] sum_out
    );
 
-reg [FBIT2:0] ia_Re, ia_Im, ia_d_Re, ia_d_Im;
+reg [16:0] ia, ia_d;
 always @(posedge clk)
 begin
 	if (rst)			begin
-		ia_Re 	<= {(FBIT2){1'b0}};
-		ia_Im 	<= {(FBIT2){1'b0}};
-		ia_d_Re	<= {(FBIT2){1'b0}};
-		ia_d_Im	<= {(FBIT2){1'b0}};
+		ia 	<= 17'd0;
+		ia_d	<= 17'd0;		
 		end
 	else if(ena)	begin
-		ia_Re 	<= a_Re;
-		ia_Im 	<= a_Im;
-		ia_d_Re 	<= a_d_Re;
-		ia_d_Im 	<= a_d_Im;
+		ia		<= a;
+		ia_d 	<= a_d;
 		end
 end
 
-reg [(13+2*FBIT2):0] sum_reg;
+reg [23:0] sum_reg;
 always @(posedge clk)
 begin
-	if (rst)			sum_reg <=  {(14+2*FBIT2){1'b0}};
-	else if(ena)	sum_reg <= {sum_out_Im, sum_out_Re};
+	if (rst)			sum_reg <= 24'd0;
+	else if(ena)	sum_reg <= mov_sum;
 end
 
-assign sum_out_Re = $signed(sum_reg[6+FBIT2:0]) 				+ $signed({{6{ia_Re[FBIT2]}},ia_Re}) - $signed({{6{ia_d_Re[FBIT2]}},ia_d_Re}); 
-assign sum_out_Im = $signed(sum_reg[(13+2*FBIT2):7+FBIT2]) 	+ $signed({{6{ia_Im[FBIT2]}},ia_Im}) - $signed({{6{ia_d_Im[FBIT2]}},ia_d_Im}); 
+wire signed [17:0] delay_sub	= $signed({1'b0,ia}) - $signed({1'b0,ia_d});
+wire signed [23:0] mov_sum = $signed(sum_reg) + $signed({{6{delay_sub[17]}},delay_sub});
 
+assign	sum_out = mov_sum;	
 endmodule

@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date:    15:08:32 09/21/2012 
+// Create Date:    20:02:39 04/18/2012 
 // Design Name: 
-// Module Name:    Signed_Mult_tap 
+// Module Name:    ML_tap 
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
@@ -21,7 +21,7 @@
 module Signed_Mult_tap(
    input 	 	[1:0] rxin,		//[1] :signed bit of imaginary part, [0] :signed bit of real part,
 	input			[1:0] preamble,	//[1] :signed bit of imaginary part, [0] :signed bit of real part,
-	output 	 	[1:0] mult_out_Re, mult_out_Im  // = rxin * conj(preamble) 
+	output 	 	[1:0] mult_out_Re, mult_out_Im
     );
 	 
 wire cmp1_Re = (rxin[0] == preamble[0]);

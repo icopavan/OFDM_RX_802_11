@@ -42,7 +42,7 @@ FFT_ipcore FFT_ins (
 	.aclk(CLK_I), 						// input aclk
 	.aresetn(aresetn), 					// input aresetn
 	//.s_axis_config_tdata(16'h0157), // input [15 : 0] s_axis_config_tdata; scale: shift right 9 bits : 2, 2, 2, 3
-	.s_axis_config_tdata(16'h002B), // input [15 : 0] s_axis_config_tdata; scale: shift right 3 bits : 0, 1, 1, 1
+	.s_axis_config_tdata(8'h2B), // input [15 : 0] s_axis_config_tdata; scale: shift right 3 bits : 0, 1, 1, 1
 	.s_axis_config_tvalid(1'b1), // input s_axis_config_tvalid
 	.s_axis_config_tready(), // ouput s_axis_config_tready
 	.s_axis_data_tdata(DAT_I[31:0]), // input [31 : 0] s_axis_data_tdata

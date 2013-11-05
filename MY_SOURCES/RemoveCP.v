@@ -30,8 +30,8 @@ module RemoveCP(
 	input				ACK_I	
     );
 
-parameter LCP  = 32;
-parameter NFFT = 256;
+parameter LCP  = 16;
+parameter NFFT = 64;
 
 reg [9:0] dat_cnt;
 reg		 CYC_I_pp;
@@ -82,6 +82,5 @@ begin
 end
 
 assign ACK_O = STB_I & (ACK_I|(~STB_O));
-//assign WE_O  = WE_I_pp;
 assign WE_O = STB_O;
 endmodule

@@ -48,4 +48,3 @@ assign  	val	= ena_abs;
 
 
 endmodule
-

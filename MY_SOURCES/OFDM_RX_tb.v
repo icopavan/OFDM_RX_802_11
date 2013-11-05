@@ -37,7 +37,7 @@ reg			 ack_i;
 
 
 
-OFDM_RX_802_16 UUT(
+OFDM_RX_802_11 UUT(
 	.CLK_I(clk), .RST_I(rst),
 	.Q_CH_I(dat_in[31:16]),
 	.I_CH_I(dat_in[15:0]),
@@ -86,7 +86,7 @@ end
 
 always #10 	clk 		= ~clk;
 
-reg 		wr_frm; 
+reg 		wr_frm;  
 initial 	begin	
 			wr_frm = 1'b0; 
 			wr_datin =1'b1;
@@ -128,7 +128,7 @@ always @(posedge clk) begin
 				wr_frm_pp <= wr_frm;
 				stb_i		<= 1'b1;
 			end
-			else if ((ii == ((Flen+Toff)*(lop_cnt+1) -1))&(ack_o)) begin 
+			else if ((ii == ((Flen)*(lop_cnt+1) -1))&(ack_o)) begin 
 				cyc_i		<= 1'b0;
 				stb_i		<= 1'b0;
 				wr_frm	<= 1'b0;
@@ -143,7 +143,7 @@ always @(posedge clk) begin
 			stb_i		<= 1'b0;
 		end
 		
-		if (stb_i & ack_o & (ii < ((Flen+Toff)*(lop_cnt+1) -1))) begin
+		if (stb_i & ack_o & (ii < ((Flen)*(lop_cnt+1) -1))) begin
 				dat_in 	<= {datin_Im[ii + 1], datin_Re[ii + 1]};	
 				ii 		<= ii+1;
 		end
@@ -174,13 +174,13 @@ wire 			Synch_ack_o	 = UUT.Synch_ins.ACK_O;
 
 
 // FreComp ===============================================================================
-wire [31:0] FreComp_datout 	= UUT.FreComp_ins.DAT_O;
-wire 			FreComp_stb_o		= UUT.FreComp_ins.STB_O;
-wire 			FreComp_we_o		= UUT.FreComp_ins.WE_O;
-wire 			FreComp_ack_o		= UUT.FreComp_ins.ACK_O;
-wire [15:0] FreComp_phase_rot 		= UUT.FreComp_ins.phase_rot;
-wire 			FreComp_phase_acc_rdy 	= UUT.FreComp_ins.phase_acc_rdy;
-wire 			FreComp_phase_acc_ce 	= (~UUT.FreComp_ins.out_halt);
+//wire [31:0] FreComp_datout 	= UUT.FreComp_ins.DAT_O;
+//wire 			FreComp_stb_o		= UUT.FreComp_ins.STB_O;
+//wire 			FreComp_we_o		= UUT.FreComp_ins.WE_O;
+//wire 			FreComp_ack_o		= UUT.FreComp_ins.ACK_O;
+//wire [15:0] FreComp_phase_rot 		= UUT.FreComp_ins.phase_rot;
+//wire 			FreComp_phase_acc_rdy 	= UUT.FreComp_ins.phase_acc_rdy;
+//wire 			FreComp_phase_acc_ce 	= (~UUT.FreComp_ins.out_halt);
 // RemoveCP ===============================================================================
 wire [31:0] RemoveCP_datout = UUT.RemoveCP_ins.DAT_O;
 wire 			RemoveCP_stb_o	 = UUT.RemoveCP_ins.STB_O;
@@ -217,9 +217,9 @@ integer Synch_datout_cnt, FreComp_datout_cnt, RemoveCP_datout_cnt, FFT_datout_cn
 initial begin	
 	Synch_datout_Re_fo 			= $fopen("./MATLAB/RTL_OFDM_RX_Synch_datout_Re.txt");	
 	Synch_datout_Im_fo 			= $fopen("./MATLAB/RTL_OFDM_RX_Synch_datout_Im.txt");	
-	FreComp_datout_Re_fo 		= $fopen("./MATLAB/RTL_OFDM_RX_FreComp_datout_Re.txt");
-	FreComp_datout_Im_fo 		= $fopen("./MATLAB/RTL_OFDM_RX_FreComp_datout_Im.txt");
-	FreComp_phase_rot_fo 		= $fopen("./MATLAB/RTL_OFDM_RX_FreComp_phase_rot.txt");	
+//	FreComp_datout_Re_fo 		= $fopen("./MATLAB/RTL_OFDM_RX_FreComp_datout_Re.txt");
+//	FreComp_datout_Im_fo 		= $fopen("./MATLAB/RTL_OFDM_RX_FreComp_datout_Im.txt");
+//	FreComp_phase_rot_fo 		= $fopen("./MATLAB/RTL_OFDM_RX_FreComp_phase_rot.txt");	
 	RemoveCP_datout_Re_fo 		= $fopen("./MATLAB/RTL_OFDM_RX_RemoveCP_datout_Re.txt");
 	RemoveCP_datout_Im_fo 		= $fopen("./MATLAB/RTL_OFDM_RX_RemoveCP_datout_Im.txt");
 	FFT_datout_Re_fo 				= $fopen("./MATLAB/RTL_OFDM_RX_FFT_datout_Re.txt");	
@@ -243,14 +243,14 @@ initial begin
 			$fwrite(Synch_datout_Im_fo,"%d ", $signed(Synch_datout[31:16])); 			
 			Synch_datout_cnt = Synch_datout_cnt+1; 		
 		end
-		if (FreComp_stb_o) 	begin	
-			$fwrite(FreComp_datout_Re_fo,"%d ", $signed(FreComp_datout[15:0]));
-			$fwrite(FreComp_datout_Im_fo,"%d ", $signed(FreComp_datout[31:16]));				
-			FreComp_datout_cnt = FreComp_datout_cnt+1;	
-		end
-		if (FreComp_phase_acc_rdy & FreComp_phase_acc_ce) begin			
-			$fwrite(FreComp_phase_rot_fo,"%d ",$signed(FreComp_phase_rot));			
-		end	
+//		if (FreComp_stb_o) 	begin	
+//			$fwrite(FreComp_datout_Re_fo,"%d ", $signed(FreComp_datout[15:0]));
+//			$fwrite(FreComp_datout_Im_fo,"%d ", $signed(FreComp_datout[31:16]));				
+//			FreComp_datout_cnt = FreComp_datout_cnt+1;	
+//		end
+//		if (FreComp_phase_acc_rdy & FreComp_phase_acc_ce) begin			
+//			$fwrite(FreComp_phase_rot_fo,"%d ",$signed(FreComp_phase_rot));			
+//		end	
 		if (RemoveCP_stb_o) 	begin	
 			$fwrite(RemoveCP_datout_Re_fo,"%d ", $signed(RemoveCP_datout[15:0]));
 			$fwrite(RemoveCP_datout_Im_fo,"%d ", $signed(RemoveCP_datout[31:16]));
@@ -294,9 +294,9 @@ initial begin
 	if (stop_chk)	begin
 		$fclose(Synch_datout_Re_fo);
 		$fclose(Synch_datout_Im_fo);
-		$fclose(FreComp_datout_Re_fo);
-		$fclose(FreComp_datout_Im_fo);
-		$fclose(FreComp_phase_rot_fo);
+//		$fclose(FreComp_datout_Re_fo);
+//		$fclose(FreComp_datout_Im_fo);
+//		$fclose(FreComp_phase_rot_fo);
 		$fclose(RemoveCP_datout_Re_fo);
 		$fclose(RemoveCP_datout_Im_fo);
 		$fclose(FFT_datout_Re_fo);

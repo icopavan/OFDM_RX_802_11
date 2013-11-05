@@ -1,26 +1,20 @@
 clear all
 close all
 
-%dur  = 3.2e-6;  
 NLOP = 2;    % number of loop
-NFFT = 256;      % Number of FFT points
-NC   = 192;      % Number of subcarriers
-NDS  = 1;        % Number of Data symbol per frame
-NS   = NDS*NLOP; % number of symbols
-NP   = 8;        % Number of pilots in symbol -88 -63 -38 -13 13 38 63 88
-CP   = 32;       % cyclic prefix length
-PRE  = 2;        % preamble symbol = 2
-FBIT = 6;
+NFFT = 64;      % Number of FFT points
+NC   = 48;      % Number of subcarriers
+NDS  = 2;        % Number of Data symbol per frame
+NS   = NDS*NLOP;   % number of symbols
+NP   = 4;        % Number of pilots in symbol –21, –7, 7, and 21
+CP   = 16;       % cyclic prefix length
+PRE  = 4;        % preamble symbol = 2
 
-Nfail = zeros(2,4);
-
-N = 128;
+N = 64;
 M = N/2;
-L = 32;
-C = 2*M; %length of computed received samples for Mp
 
-SNR = 15;
-FOFF = 0.5;
+SNR = 25;
+FOFF = 0;
 toff = 129;
 tcor = toff+33+3*M;
 
@@ -29,25 +23,27 @@ tcor = toff+33+3*M;
 bit_symbols = round(3*rand(NC, NS));
 
 %QPSK =================================================================
-QPSK = 1- 2.*mod(bit_symbols,2) + 1i *(1- 2.*floor(bit_symbols/2));
-QPSK = (1/sqrt(2))*QPSK;
-bit_symbols_stream = reshape(bit_symbols,NC*NS,1);
-%insert subcarriers & pilots ==========================================
-% pilot ===============================================================
-Pil = Pilots(NDS);
-Pil = repmat(Pil,1,NLOP);
-%Pil = zeros(8,NS);
-symbol = [ zeros(1,NS); QPSK(1  :12, :);  ...
-              Pil(1,:); QPSK(13 :36, :); ...
-              Pil(2,:); QPSK(37 :60, :); ...
-              Pil(3,:); QPSK(61 :84, :); ...
-              Pil(4,:); QPSK(85 :96, :); ...
-             zeros(NFFT-NC-NP-1,NS); ...
-                        QPSK(97 :108,:); ...    
-              Pil(5,:); QPSK(109:132,:); ...
-              Pil(6,:); QPSK(133:156,:); ...
-              Pil(7,:); QPSK(157:180,:); ...
-              Pil(8,:); QPSK(181:192,:); ];
+QPSK    = 2.*mod(bit_symbols,2)-1 + 1i *(2.*floor(bit_symbols/2)-1);
+QPSK    = QPSK *(1/sqrt(2));   
+dat_mod = QPSK;
+
+% insert subcarriers & pilots =============================================
+% pilots in symbol –21, –7, 7, and 21======================================
+
+pilots_802_11;
+Pil = repmat(pils(:,1:NDS),1,NLOP);
+symbol = zeros(NFFT,NS);
+symbol(1,:)     = zeros(1,NS);
+symbol(2:7,:)   = dat_mod(1:6, :);
+symbol(8,:)     = Pil(1,NS);
+symbol(9:21,:)  = dat_mod(7:19, :);
+symbol(22,:)    = Pil(2,NS);
+symbol(23:27,:) = dat_mod(20:24, :);
+symbol(39:43,:) = dat_mod(25:29, :);
+symbol(44,:)    = Pil(3,NS);
+symbol(45:57,:) = dat_mod(30:42, :);
+symbol(58,:)    = Pil(4,NS);
+symbol(59:64,:) = dat_mod(43:48, :);
 
 %IFFT =================================================================
 tx_d =  ifft(symbol, NFFT, 1);
@@ -58,15 +54,18 @@ tx_d = [tx_d(NFFT-CP+1: NFFT,:); tx_d];
 %Add Preamble =========================================================
 tx_out = zeros((NFFT+CP), (PRE + NDS)*NLOP);
 
-[DL_preamble, UL_preamble, pre64, pre128, peven] = preamble_802_16();   
-DL_preamble_nor = DL_preamble; 
-preamb = reshape(DL_preamble_nor, NFFT+CP, PRE);
+preamble_802_11;   
+preamble_nor = [short_pre long_pre]; 
+preamb = reshape(preamble_nor, NFFT+CP, PRE);
+
 for ii = 0:NLOP -1,
-    tx_out(:,(PRE + NDS)*ii+1) = preamb(:,1);
-    tx_out(:,(PRE + NDS)*ii+2) = preamb(:,2);
+    for jj = 1:PRE,
+        tx_out(:,(PRE + NDS)*ii+jj) = preamb(:,jj);
+    end
+    %tx_out(:,(PRE + NDS)*ii+2) = preamb(:,2);
     if (NDS ~=0 )
         for jj = 1:NDS,
-            tx_out(:,(PRE + NDS)*ii+2+jj) = tx_d(:,ii*NDS+jj);            
+            tx_out(:,(PRE + NDS)*ii+PRE+jj) = tx_d(:,ii*NDS+jj);            
         end
     end
 end
@@ -88,21 +87,12 @@ toff_mat = zeros(toff,NLOP);
 rx_in = [toff_mat; rx_in];
 rx_in = reshape(rx_in,1,((CP+NFFT)*(PRE + NDS) + toff) * NLOP);
 rx_in = awgn(rx_in ,SNR,'measured');   
-rx_in = 0.5*(rx_in ./ max([max(real(rx_in)) max(imag(rx_in))]));
+rx_in = 0.9*(rx_in ./ max([max(real(rx_in)) max(imag(rx_in))]));
 %rx_in = rx_in .*2;
-
-known_pre = pre64;
-abs_pre = abs(pre64).^2;
-known_coeff = round((abs_pre./max(abs_pre)).*2)./2;
-
-known_coeff_rtl = typecast(int8(real(known_coeff(1:64).*2)),'uint8');
-fid = fopen('Synch_known_coeff_rtl.txt', 'w');
-fprintf(fid, '%x ', known_coeff_rtl);
-fclose(fid);
 
 %write data to file =======================================================
 fid = fopen('OFDM_RX_bit_symbols.txt', 'w');
-fprintf(fid, '%d ', bit_symbols_stream);
+fprintf(fid, '%d ', bit_symbols);
 fclose(fid);
 
 Len = length(rx_in);
@@ -119,7 +109,7 @@ datin_Im = typecast(int16(imag(datin_rtl)),'uint16');
 
 SNR_w = round(SNR);
 if (SNR >15), SNR_w = 15; end
-Flen = 288 *(PRE+NDS);
+Flen = toff + (NFFT+CP) *(PRE+NDS);
 fid = fopen('RTL_OFDM_RX_datin_len.txt', 'w');
 fprintf(fid, '%d %d %d %d', NLOP, Flen, SNR_w, toff);
 fclose(fid);
@@ -130,36 +120,16 @@ fid = fopen('RTL_OFDM_RX_datin_Im.txt', 'w');
 fprintf(fid, '%4x ', datin_Im);
 fclose(fid);
 
-% for C = 2*M;
-% AWGN_Q 2M
-if (FBIT == 3 ),
-    % threshold for nSUI = 0; C = 2M; Q=3; np =8; 2p
-    thres_coeff =  [4.18 4.00 4.76 6.12 5.69 8.00 7.33 6.91 8.00 8.00 8.00 8.00*ones(1, 6)];
-elseif (FBIT == 4 ),    
-    % threshold for nSUI = 0; C = 2M; Q=4; np =8; 2p
-    thres_coeff =  [1.83 2.16 2.12 2.06 2.84 2.47 2.89 3.00 3.29 3.00 3.20 3.20*ones(1, 6)];
-elseif (FBIT == 5 ),    
-    % threshold for nSUI = 0; C = 2M; Q=5; np =8; 2p
-    thres_coeff =  [1.19 1.28 1.44 1.65 1.70 1.76 1.82 1.88 1.94 2.00 2.00 2.00*ones(1, 6)];
-elseif (FBIT == 6 ),    
-    % threshold for nSUI = 0; C = 2M; Q=6; np =8; 2p
-    thres_coeff =  [1.06 1.15 1.27 1.42 1.52 1.62 1.70 1.75 1.75 1.75 1.75 1.75*ones(1, 6)];
-elseif (FBIT == 7 ),    
-    % threshold for nSUI = 0; C = 2M; Q=7; np =8; 2p
-    thres_coeff =  [0.97 1.09 1.16 1.26 1.38 1.50 1.60 1.60 1.60 1.60 1.60 1.60*ones(1, 6)];
-elseif (FBIT == 12 ),    
-    % threshold for nSUI = 0; C = 2M; Q=12; np =8; 2p
-    thres_coeff =  [0.90 0.99 1.04 1.14 1.24 1.34 1.44 1.54 1.54 1.54 1.54 1.54*ones(1, 6)];
-elseif (FBIT == 15 ),    
-    % threshold for nSUI = 0; C = 2M; Q=12; np =8; 2p
-    thres_coeff =  [0.90 0.99 1.04 1.14 1.24 1.34 1.44 1.54 1.54 1.54 1.54 1.54*ones(1, 6)];
-end
+% data cofficient for system synthesis ==================================== 
 
-thres_coeff_rtl = typecast(int32(thres_coeff .* 2^15),'uint32');
-fid = fopen('RTL_Synch_thres_coeff_q05.txt', 'w');
-fprintf(fid, '%5x ', thres_coeff_rtl(1:16));
+known_coeff = 2*(imag(long_pre(1:64))<0) + 1*(real(long_pre(1:64)<0));
+known_coeff_rtl = typecast(int8(known_coeff(1:64)),'uint8');
+fid = fopen('../MY_SOURCES/Synch_known_coeff_802_11.txt', 'w');
+fprintf(fid, '%x ', known_coeff_rtl);
 fclose(fid);
 
-fid = fopen('Synch_thres_coeff_q05.txt', 'w');
-fprintf(fid, '%f ', thres_coeff);
+known_coeff = 2*(imag(long_sym([2:27, 39:64]))<0) + 1*(real(long_sym([2:27, 39:64]))<0);
+known_coeff_rtl = typecast(int8(known_coeff),'uint8');
+fid = fopen('../MY_SOURCES/ChEstEqu_lpre.txt', 'w');
+fprintf(fid, '%x ', known_coeff_rtl);
 fclose(fid);
